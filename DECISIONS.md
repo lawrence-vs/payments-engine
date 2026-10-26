@@ -149,6 +149,12 @@ Findings F1 to F15 came from a read-only review of the design and test plan. Eac
 - **Rejected:** field errors first (the first implementation did this; no test pinned the order).
 - **Tests:** three rows in the parse table (bad client, bad amount, unknown type, each with a fifth field) and two in the burn table.
 
+## D25 Engine edge points
+- **Do:** (a) one `Locked` error covers all five event types on a locked account; (b) a row that fails to parse burns its id but opens no account; (c) the error categories (bad, failed, ignored, needs review) are mapped in the output ticket, not in the engine.
+- **Why:** A row that fails to parse burns its id but opens no account. The other two points were agreed as written.
+- **Rejected:** opening an account from a row that failed to parse (the client may not be readable).
+- **Consequence:** for `deposit,7,1,abc` client 7 has no record, while `withdrawal,7,1,5` with no funds does (D14).
+
 ## Accepted without change
 - **F9 (locked account with another dispute open):** the rule stays; the held funds stay held for a human. A data file pins it. A resolve after a chargeback is ignored (the tx is final and the account is locked).
 - **F11 (invariants that cannot fail):** accepted. No random-operation test; multi-event table cases (double resolve, chargeback after resolve, two disputes then one chargeback) are added to the engine tables.
