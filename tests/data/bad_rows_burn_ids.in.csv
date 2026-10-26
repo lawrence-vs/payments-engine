@@ -1,0 +1,9 @@
+type, client, tx, amount
+deposit,1,1,10
+deposit,1,5,abc
+deposit,1,5,7
+deposit,1,6,0
+deposit,1,6,3
+foo,1,9,1
+deposit,70000,10,1
+deposit,2,10,5
