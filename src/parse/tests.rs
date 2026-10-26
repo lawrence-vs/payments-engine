@@ -188,6 +188,21 @@ fn parse_record_table() {
             Err(ParseError::TooManyFields { row: 1 }),
         ),
         (
+            "rej_toomany_beats_bad_client",
+            &["deposit", "x", "5", "1", "extra"],
+            Err(ParseError::TooManyFields { row: 1 }),
+        ),
+        (
+            "rej_toomany_beats_bad_amount",
+            &["deposit", "1", "5", "abc", "extra"],
+            Err(ParseError::TooManyFields { row: 1 }),
+        ),
+        (
+            "rej_toomany_beats_unknown_type",
+            &["foo", "1", "1", "1", "extra"],
+            Err(ParseError::TooManyFields { row: 1 }),
+        ),
+        (
             "rej_first_error_wins",
             &["deposit", "x", "y", "z"],
             Err(ParseError::BadClient { row: 1 }),
@@ -212,6 +227,8 @@ fn burn_table() {
         ("burn_bad_client_good_tx", &["deposit", "abc", "7", "1"], Some(7)),
         ("burn_missing_amount", &["deposit", "1", "8"], Some(8)),
         ("burn_five_fields", &["deposit", "1", "9", "1", "x"], Some(9)),
+        ("burn_toomany_bad_client", &["deposit", "x", "5", "1", "extra"], Some(5)),
+        ("burn_toomany_unknown_type", &["foo", "1", "10", "1", "extra"], None),
         ("burn_bad_tx", &["deposit", "1", "x", "1"], None),
         ("burn_missing_tx", &["deposit", "1"], None),
         ("burn_unknown_type", &["foo", "1", "10", "1"], None),
