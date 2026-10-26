@@ -7,7 +7,7 @@ Policies are the engineer's. Each row: what we do, why (engineer's words), rejec
 - **Why:** I can rely on typed rows for error matching and type safety enforced, instead of parsing strings.
 - **Rejected:** `csv` + serde derive (field errors arrive as strings); no crates (we would own quoting, CRLF, BOM).
 - **Verified in a scratch crate (csv 1.4.0):** a BOM is stripped from the header; CRLF, tabs around fields and quoted fields are handled with trim on; blank lines are skipped; dependencies are csv-core, memchr, itoa, ryu and serde_core. See D18 for the row-length and UTF-8 findings.
-- **UNVERIFIED:** BOM on the first line when headers are turned off (needed by D19). t-02 tests it.
+- **Verified (scratch crate):** with headers off a BOM on the first line is still stripped, so header detection (D19) sees a clean first field. The crate's reported line number is unreliable (it gave line 1 for a record on line 3 after blank lines, and for the second record of a CRLF file), so "row N" in our errors means the Nth record counted by us.
 
 ## D2 Amount format
 - **Do:** lenient parse into whole ten-thousandths. Accept `1.` and `.5`. No sign accepted. More than 4 places, `1e3`, `1,5`, NaN, empty and overflow are rejected.
@@ -121,7 +121,7 @@ Findings F1 to F15 came from a read-only review of the design and test plan. Eac
 ## D19 Header (F12)
 - **Do:** detect the header. If line 1 is not a header, warn and parse it as data, so we never lose a row. The output always starts with its header line, even for empty input.
 - **Why:** Detect the header so we never lose a row.
-- **Assumptions, UNVERIFIED:** a header means the first record's four names match type, client, tx, amount ignoring case after trim; the reader runs with headers off and the check is ours.
+- **Assumption, UNVERIFIED with the engineer:** a header means the first record's four names match type, client, tx, amount ignoring case after trim. The reader runs with headers off and the check is ours (BOM, trim and case verified in a scratch crate).
 - **Rejected:** always treat line 1 as the header.
 
 ## D20 Log cap and counts (F10)
