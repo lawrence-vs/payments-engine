@@ -29,7 +29,12 @@ pub(crate) struct Diagnostics<W: Write> {
 
 impl fmt::Display for Category {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("")
+        f.write_str(match self {
+            Self::Bad => "bad",
+            Self::Failed => "failed",
+            Self::Ignored => "ignored",
+            Self::NeedsReview => "needs review",
+        })
     }
 }
 
@@ -38,19 +43,61 @@ impl<W: Write> Diagnostics<W> {
         Self { sink, logged: 0, counts: Counts::default() }
     }
 
-    pub(crate) fn warn(&mut self, _message: impl Display) {}
+    pub(crate) fn warn(&mut self, message: impl Display) {
+        self.line(format_args!("warning: {message}"));
+    }
 
-    pub(crate) fn reject(&mut self, _category: Category, _error: impl Display) {}
+    pub(crate) fn reject(&mut self, category: Category, error: impl Display) {
+        let count = match category {
+            Category::Bad => &mut self.counts.bad,
+            Category::Failed => &mut self.counts.failed,
+            Category::Ignored => &mut self.counts.ignored,
+            Category::NeedsReview => &mut self.counts.needs_review,
+        };
+        *count = count.saturating_add(1);
+        if self.logged < LOG_CAP {
+            self.logged = self.logged.saturating_add(1);
+            self.line(format_args!("{category}: {error}"));
+        }
+    }
 
-    pub(crate) fn finish(self) {}
+    pub(crate) fn finish(mut self) {
+        let counts = self.counts();
+        let summary = [
+            (Category::Bad, counts.bad),
+            (Category::Failed, counts.failed),
+            (Category::Ignored, counts.ignored),
+            (Category::NeedsReview, counts.needs_review),
+        ];
+        for (category, count) in summary {
+            if count > 0 {
+                self.line(format_args!("skipped {category}: {count}"));
+            }
+        }
+    }
 
     pub(crate) fn counts(&self) -> &Counts {
         &self.counts
     }
+
+    // Logging must never stop the run, so a failed write to the sink is dropped.
+    fn line(&mut self, text: fmt::Arguments<'_>) {
+        let _ = writeln!(self.sink, "{text}");
+    }
 }
 
-pub(crate) fn category(_error: &EngineError) -> Category {
-    Category::Bad
+pub(crate) fn category(error: &EngineError) -> Category {
+    match error {
+        EngineError::Locked { .. }
+        | EngineError::InsufficientFunds { .. }
+        | EngineError::Overflow { .. } => Category::Failed,
+        EngineError::DuplicateTx { .. }
+        | EngineError::UnknownTx { .. }
+        | EngineError::NotDisputable { .. }
+        | EngineError::NotUnderDispute { .. }
+        | EngineError::ClientMismatch { .. } => Category::Ignored,
+        EngineError::AlreadyDisputed { .. } => Category::NeedsReview,
+    }
 }
 
 #[cfg(test)]
