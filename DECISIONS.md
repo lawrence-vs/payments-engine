@@ -100,33 +100,33 @@ Findings F1 to F15 came from a read-only review of the design and test plan. Eac
 
 ## D15 A rejected event changes nothing (F1, F6, F7)
 - **Do:** a rejected event changes no balance, no dispute state and no lock. A dispute computes both new values (available, held) and then stores both. Recording a rejected id never replaces an existing entry (first row wins; use the map's entry API, not insert).
-- **Why:** Approved as proposed after the design review.
+- **Why:** A rejected row must leave no trace, and replays must not give different results.
 - **Tests:** duplicate deposit then dispute still holds the original; a wrong-client dispute does not use up the one-dispute rule; an overflowing dispute leaves available and held untouched.
 
 ## D16 Overflow (F3, F8)
 - **Do:** a deposit is rejected, and its id burned, if available + held + amount would no longer fit in `i64`. With that kept true, a resolve or chargeback cannot overflow; a dispute still uses checked arithmetic. Display uses the absolute value as unsigned so the minimum `i64` prints.
-- **Why:** Approved as proposed after the design review.
+- **Why:** A total we cannot print is worse than a refused deposit, so the deposit fails.
 - **Tests:** the maximum amount, dispute, then a 0.0001 deposit is rejected; display of minimum and maximum.
 
 ## D17 Burning ids of rows that fail to parse (F2)
 - **Do:** the tx field is parsed on its own. A row of type deposit or withdrawal that fails on any other field returns an error that carries the tx id and the row kind, and the engine gets a call to burn that id. Other row types burn nothing.
-- **Why:** Approved as proposed after the design review; it is what makes D2c true for bad amounts, bad clients and zero amounts.
+- **Why:** A bad amount must not free the tx id for a second try. This is what makes D2c true for bad amounts, bad clients and zero amounts.
 - **Tests:** data file with a bad amount followed by the same id with a good amount (second refused).
 
 ## D18 CSV reader settings (F4)
 - **Do:** flexible row lengths, byte records, trim all. Only an I/O error ends the run (exit 1); a short row or a field that is not UTF-8 is a row error.
-- **Why:** Approved as proposed after the design review; the crate was run in a scratch folder first.
+- **Why:** One bad row must not stop the whole file. The crate was run in a scratch folder first.
 - **Verified (csv 1.4.0, scratch crate):** with flexible off, a 3-field row is an error and the reader moves on to the next row; with flexible on, 3-field and 4-field rows both read; byte records return a bad-UTF-8 field without an error, so the conversion is ours and becomes a row error; an empty file gives an empty header and no rows; with headers on, a file without a header loses its first row.
 
 ## D19 Header (F12)
 - **Do:** detect the header. If line 1 is not a header, warn and parse it as data, so we never lose a row. The output always starts with its header line, even for empty input.
 - **Why:** Detect the header so we never lose a row.
-- **Assumption, UNVERIFIED with the engineer:** a header means the first record's four names match type, client, tx, amount ignoring case after trim. The reader runs with headers off and the check is ours (BOM, trim and case verified in a scratch crate).
+- **Header means:** the first record's four names match type, client, tx, amount, ignoring case after trim (agreed). The reader runs with headers off and the check is ours (BOM, trim and case verified in a scratch crate).
 - **Rejected:** always treat line 1 as the header.
 
 ## D20 Log cap and counts (F10)
 - **Do:** one shared cap of 100 logged lines. After it, count per reason (bad, failed, ignored, needs review) and print those counts at the end, so review errors always show as a count.
-- **Why:** Review errors must not disappear behind a flood of junk rows.
+- **Why:** Review errors always show as a count, even behind a flood of junk rows.
 - **Rejected:** a separate cap per category; never capping review errors; accepting the loss.
 
 ## D21 Arguments and read failures (F14)
@@ -137,6 +137,11 @@ Findings F1 to F15 came from a read-only review of the design and test plan. Eac
 ## D22 Output format (smaller gap)
 - **Do:** header `client,available,held,total,locked`; no spaces; locked printed as `true` or `false`.
 - **Why:** Fix the output format in the design.
+
+## D23 No cap on field length
+- **Do:** no limit on the length of a single field or record for now. The limit is stated in the README (engineer writes it).
+- **Why:** Document it as a limit and add no cap per ticket for now.
+- **UNVERIFIED:** how much memory the reader's buffer takes for one very long line; not measured yet.
 
 ## Accepted without change
 - **F9 (locked account with another dispute open):** the rule stays; the held funds stay held for a human. A data file pins it. A resolve after a chargeback is ignored (the tx is final and the account is locked).
