@@ -2,11 +2,19 @@ use super::*;
 use crate::{Amount, ClientId};
 use std::io::{self, Read};
 
-struct FailingReader;
+struct FailsAfter(&'static [u8]);
 
-impl Read for FailingReader {
-    fn read(&mut self, _buf: &mut [u8]) -> io::Result<usize> {
-        Err(io::Error::other("read failed"))
+impl Read for FailsAfter {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        if self.0.is_empty() {
+            return Err(io::Error::other("read failed"));
+        }
+        let n = self.0.len().min(buf.len());
+        let (head, tail) = self.0.split_at(n);
+        let (out, _) = buf.split_at_mut(n);
+        out.copy_from_slice(head);
+        self.0 = tail;
+        Ok(n)
     }
 }
 
@@ -330,11 +338,18 @@ fn read_events_table() {
 
 #[test]
 fn io_error_table() {
-    let cases: &[(&str, &[&str])] = &[("first_read_fails", &["IO"])];
+    let cases: &[(&str, &'static [u8], &[&str])] = &[
+        ("first_read_fails", b"", &["IO"]),
+        (
+            "fails_after_valid_row",
+            b"type,client,tx,amount\ndeposit,1,1,1.0\n",
+            &["E D(1,1,10000)", "IO"],
+        ),
+    ];
 
     let mut failures = Vec::new();
-    for (name, expected) in cases {
-        let got: Vec<String> = read_events(FailingReader).map(token).collect();
+    for (name, data, expected) in cases {
+        let got: Vec<String> = read_events(FailsAfter(data)).map(token).collect();
         let want: Vec<String> = expected.iter().map(|s| s.to_string()).collect();
         if got != want {
             failures.push(format!("{name}: got {got:?}, want {want:?}"));
