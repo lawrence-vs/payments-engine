@@ -6,7 +6,8 @@ Policies are the engineer's. Each row: what we do, why (engineer's words), rejec
 - **Do:** `csv` crate only, no serde. Rows become typed values by our own field parsing.
 - **Why:** I can rely on typed rows for error matching and type safety enforced, instead of parsing strings.
 - **Rejected:** `csv` + serde derive (field errors arrive as strings); no crates (we would own quoting, CRLF, BOM).
-- **UNVERIFIED:** whether `csv` strips a BOM; transitive dependency count. t-02 tests the BOM.
+- **Verified in a scratch crate (csv 1.4.0):** a BOM is stripped from the header; CRLF, tabs around fields and quoted fields are handled with trim on; blank lines are skipped; dependencies are csv-core, memchr, itoa, ryu and serde_core. See D18 for the row-length and UTF-8 findings.
+- **UNVERIFIED:** BOM on the first line when headers are turned off (needed by D19). t-02 tests it.
 
 ## D2 Amount format
 - **Do:** lenient parse into whole ten-thousandths. Accept `1.` and `.5`. No sign accepted. More than 4 places, `1e3`, `1,5`, NaN, empty and overflow are rejected.
@@ -27,7 +28,7 @@ Policies are the engineer's. Each row: what we do, why (engineer's words), rejec
 - **UNVERIFIED:** scope is deposit and withdrawal rows only; dispute, resolve and chargeback rows reference an existing id and burn nothing.
 
 ## D3 Bad rows and exit code
-- **Do:** log the first 100 skipped rows (row number, field, category; never the raw text), then count the rest and print one summary line to stderr. Exit 0 if the file was read; exit 1 only for open, read or write failure.
+- **Do:** log skipped rows (row number, field, category; never the raw text) up to one shared cap of 100 lines, then count per reason (bad, failed, ignored, needs review) and print the counts at the end, so review errors always show as a count (D20). Exit 0 if the file was read; exit 1 only for open, read or write failure; exit 2 unless exactly one input path is given (D21).
 - **Why:** 100 rows is enough to diagnose the issue causing skipped rows and see the pattern. If the system scales it is better to raise it; for this design constraint 100 is fine.
 - **Rejected:** log 1000; exit non-zero when any row was skipped.
 - **Evidence:** about 52 MB of stderr per million bad rows if all logged, about 5 KB at cap 100.
@@ -89,5 +90,56 @@ Policies are the engineer's. Each row: what we do, why (engineer's words), rejec
 - **Why:** Be lenient: if the text matches once lowercased, do not risk losing deposits that should be allocated, and lose money.
 - **Rejected:** lowercase only.
 
-## Open for the Opus attack
-Questions to answer here once raised: locked account with open disputes; burned ids and memory growth under a flood of bad rows; one-dispute rule versus a resolve that arrives after a chargeback.
+## Design review outcomes (Opus attack, answered)
+Findings F1 to F15 came from a read-only review of the design and test plan. Each was answered by the engineer. "Approved as proposed" means the engineer agreed with the fix or acceptance as written.
+
+## D14 When an account exists (F5)
+- **Do:** a deposit or withdrawal row opens the client's account even if the row then fails. Dispute, resolve and chargeback rows for an unknown client leave no trace.
+- **Why:** If a client does not exist we create a new record, so a deposit or withdrawal row opens it even if it fails. Disputes, resolves and chargebacks for unknown clients leave no trace.
+- **Rejected:** open only after an accepted deposit; open on any row naming the client.
+
+## D15 A rejected event changes nothing (F1, F6, F7)
+- **Do:** a rejected event changes no balance, no dispute state and no lock. A dispute computes both new values (available, held) and then stores both. Recording a rejected id never replaces an existing entry (first row wins; use the map's entry API, not insert).
+- **Why:** Approved as proposed after the design review.
+- **Tests:** duplicate deposit then dispute still holds the original; a wrong-client dispute does not use up the one-dispute rule; an overflowing dispute leaves available and held untouched.
+
+## D16 Overflow (F3, F8)
+- **Do:** a deposit is rejected, and its id burned, if available + held + amount would no longer fit in `i64`. With that kept true, a resolve or chargeback cannot overflow; a dispute still uses checked arithmetic. Display uses the absolute value as unsigned so the minimum `i64` prints.
+- **Why:** Approved as proposed after the design review.
+- **Tests:** the maximum amount, dispute, then a 0.0001 deposit is rejected; display of minimum and maximum.
+
+## D17 Burning ids of rows that fail to parse (F2)
+- **Do:** the tx field is parsed on its own. A row of type deposit or withdrawal that fails on any other field returns an error that carries the tx id and the row kind, and the engine gets a call to burn that id. Other row types burn nothing.
+- **Why:** Approved as proposed after the design review; it is what makes D2c true for bad amounts, bad clients and zero amounts.
+- **Tests:** data file with a bad amount followed by the same id with a good amount (second refused).
+
+## D18 CSV reader settings (F4)
+- **Do:** flexible row lengths, byte records, trim all. Only an I/O error ends the run (exit 1); a short row or a field that is not UTF-8 is a row error.
+- **Why:** Approved as proposed after the design review; the crate was run in a scratch folder first.
+- **Verified (csv 1.4.0, scratch crate):** with flexible off, a 3-field row is an error and the reader moves on to the next row; with flexible on, 3-field and 4-field rows both read; byte records return a bad-UTF-8 field without an error, so the conversion is ours and becomes a row error; an empty file gives an empty header and no rows; with headers on, a file without a header loses its first row.
+
+## D19 Header (F12)
+- **Do:** detect the header. If line 1 is not a header, warn and parse it as data, so we never lose a row. The output always starts with its header line, even for empty input.
+- **Why:** Detect the header so we never lose a row.
+- **Assumptions, UNVERIFIED:** a header means the first record's four names match type, client, tx, amount ignoring case after trim; the reader runs with headers off and the check is ours.
+- **Rejected:** always treat line 1 as the header.
+
+## D20 Log cap and counts (F10)
+- **Do:** one shared cap of 100 logged lines. After it, count per reason (bad, failed, ignored, needs review) and print those counts at the end, so review errors always show as a count.
+- **Why:** Review errors must not disappear behind a flood of junk rows.
+- **Rejected:** a separate cap per category; never capping review errors; accepting the loss.
+
+## D21 Arguments and read failures (F14)
+- **Do:** exit 2 unless exactly one path is given. A read failure mid-file writes nothing and exits 1, so a partial result is not mistaken for a full one. Failures writing to stderr are ignored, never a panic.
+- **Why:** Exit 2 unless exactly one path; write nothing on a mid-file failure so a partial result is not mistaken for a full one.
+- **Rejected:** ignore extra arguments; write the partial result.
+
+## D22 Output format (smaller gap)
+- **Do:** header `client,available,held,total,locked`; no spaces; locked printed as `true` or `false`.
+- **Why:** Fix the output format in the design.
+
+## Accepted without change
+- **F9 (locked account with another dispute open):** the rule stays; the held funds stay held for a human. A data file pins it. A resolve after a chargeback is ignored (the tx is final and the account is locked).
+- **F11 (invariants that cannot fail):** accepted. No random-operation test; multi-event table cases (double resolve, chargeback after resolve, two disputes then one chargeback) are added to the engine tables.
+- **F13 (parser strings):** added to the t-01 table (`.`, `-0`, `+0`, `0.0000`, `1.50000`, long runs of leading zeros, a tab and a non-breaking space inside the field). `1.50000` stays rejected.
+- **F15 (flood of burned ids):** accepted. The id space is bounded by u32; the README reports the measured entry size.

@@ -7,7 +7,10 @@ Rules and decisions: `DESIGN.md`, `DECISIONS.md`, `PLAN.md` (read before changin
 - One test: `cargo test <name>`.
 
 ## Contract
-<!-- filled in phase 1 from the brief's own text -->
+- stdout: accounts CSV only, 4 decimals
+- stderr: logs
+- exit 0 done, 1 I/O failure, 2 no input path
+- input: type, client (u16), tx (u32), amount (≤ 4 places), spaces allowed
 
 ## Code rules
 In `.claude/rules/rust.md` (loads with any `.rs` file).
