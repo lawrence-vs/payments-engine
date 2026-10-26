@@ -170,6 +170,7 @@ pub fn read_events<R: Read>(reader: R) -> Events<R> {
     let records = ReaderBuilder::new()
         .has_headers(false)
         .flexible(true)
+        .quoting(false)
         .trim(Trim::All)
         .from_reader(reader)
         .into_byte_records();
