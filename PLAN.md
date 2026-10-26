@@ -14,6 +14,8 @@ Before t-01: Opus attack on `DESIGN.md` and the test plan; each finding answered
 | t-06-gen | `examples/gen.rs`: seeded generator, same seed gives the same bytes, no new dependencies | same seed twice gives identical bytes; a different seed differs; output is valid input | done: 213 / 249 (budget 100 / 60, revised from 80 / 40; run together with t-07 as one ticket, branch t-06-gen-numbers) |
 | t-07-numbers-docs | 10^7-row memory and time run using the generator; confirm limits | measured numbers recorded for the README | done: numbers in D10, no code (ignored 10^7 stream test in tests/gen.rs) |
 
+Final review (Opus) fixes done on branch t-06-gen-numbers: total overflow is an error (D16), quotes are literal (D18), empty trailing fields (D24), non-positive amounts (D28), row numbers in the log (D3), docs; the accepts are D27.
+
 Gate for every slice: `./check.sh` re-run by the reviewer, `rust-review` on the diff, `pgrep -fl payments-engine` prints nothing.
 
 Docs the engineer writes: README, AI_USAGE.

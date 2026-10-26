@@ -32,7 +32,7 @@ Policies are the engineer's. Each row: what we do, why (engineer's words), rejec
 - **Left for the review agent:** the engine takes any `Amount` in a deposit or withdrawal; only the parser makes sure it is positive.
 
 ## D3 Bad rows and exit code
-- **Do:** log skipped rows (row number, field, category; never the raw text) up to one shared cap of 100 lines, then count per reason (bad, failed, ignored, needs review) and print the counts at the end, so review errors always show as a count (D20). Exit 0 if the file was read; exit 1 only for open, read or write failure; exit 2 unless exactly one input path is given (D21).
+- **Do:** log skipped rows (row number, field, category; never the raw text) up to one shared cap of 100 lines, then count per reason (bad, failed, ignored, needs review) and print the counts at the end, so review errors always show as a count (D20). Refusals from the engine carry their row number too (`row N: ...`). Exit 0 if the file was read; exit 1 only for open, read or write failure; exit 2 unless exactly one input path is given (D21).
 - **Why:** 100 rows is enough to diagnose the issue causing skipped rows and see the pattern. If the system scales it is better to raise it; for this design constraint 100 is fine.
 - **Rejected:** log 1000; exit non-zero when any row was skipped.
 - **Evidence:** about 52 MB of stderr per million bad rows if all logged, about 5 KB at cap 100.
@@ -125,8 +125,11 @@ Findings F1 to F15 came from a read-only review of the design and test plan. Eac
 - **Tests:** data file with a bad amount followed by the same id with a good amount (second refused).
 
 ## D18 CSV reader settings (F4)
-- **Do:** flexible row lengths, byte records, trim all. Only an I/O error ends the run (exit 1); a short row or a field that is not UTF-8 is a row error.
+- **Do:** flexible row lengths, byte records, trim all, quoting off. Only an I/O error ends the run (exit 1); a short row or a field that is not UTF-8 is a row error. A quote is an ordinary character.
 - **Why:** One bad row must not stop the whole file. The crate was run in a scratch folder first.
+- **Why (quoting off):** Turn csv quoting off, so a stray quote makes only that row bad and every other row still parses. With quoting on, one stray opening quote swallowed every later row and the run still exited 0 with a partial result.
+- **Rejected (quoting):** keep quoting and end the run on an unterminated quote.
+- **Tests:** a stray-quote row and a data pair; quoted fields are now literal, so the old quoted-fields row expects a rejected row.
 - **Verified (csv 1.4.0, scratch crate):** with flexible off, a 3-field row is an error and the reader moves on to the next row; with flexible on, 3-field and 4-field rows both read; byte records return a bad-UTF-8 field without an error, so the conversion is ours and becomes a row error; an empty file gives an empty header and no rows; with headers on, a file without a header loses its first row.
 
 ## D19 Header (F12)
@@ -152,13 +155,14 @@ Findings F1 to F15 came from a read-only review of the design and test plan. Eac
 ## D23 No cap on field length
 - **Do:** no limit on the length of a single field or record for now. The limit is stated in the README (engineer writes it).
 - **Why:** Document it as a limit and add no cap per ticket for now.
-- **UNVERIFIED:** how much memory the reader's buffer takes for one very long line; not measured yet.
+- **Measured (final review, quoting on at the time):** one row `deposit,1,1,5` followed by 10^8 commas used 1.6 GB (16 times the input); one 10^8-byte amount field used 254 MB (2.5 times). An endless single field (`/dev/zero` as input) grows until the operating system stops the process, with no exit code 1, UNVERIFIED. A real fix later would be a capped reader that ends the run when a line passes N bytes. The README states this as a limit.
 
 ## D24 Field count is checked first
-- **Do:** a row with more than four fields reports too-many-fields before any field error, and the tx id still burns when the row is a deposit or withdrawal whose tx parsed. An unknown type with extra fields reports too-many-fields and burns nothing.
+- **Do:** a row with a non-empty value after the fourth field reports too-many-fields before any field error, and the tx id still burns when the row is a deposit or withdrawal whose tx parsed. An unknown type with extra fields reports too-many-fields and burns nothing. Empty fields after the fourth are tolerated, so `deposit,1,1,1.0,` still parses; the header line is read the same way.
 - **Why:** The whole row is broken, so we report that, and tx 5 still burns.
+- **Why (empty fields):** An empty fifth field is tolerated, so `deposit,1,1,1.0,` still parses; a non-empty fifth field still triggers too-many-fields. Without this, a file whose every line ends with a comma would be rejected row by row.
 - **Rejected:** field errors first (the first implementation did this; no test pinned the order).
-- **Tests:** three rows in the parse table (bad client, bad amount, unknown type, each with a fifth field) and two in the burn table.
+- **Tests:** three rows in the parse table (bad client, bad amount, unknown type, each with a fifth field) and two in the burn table; empty fifth and sixth fields, a value after an empty field, a header with a trailing comma, and a data pair where every line ends with a comma.
 
 ## D25 Engine edge points
 - **Do:** (a) one `Locked` error covers all five event types on a locked account; (b) a row that fails to parse burns its id but opens no account; (c) the error categories (bad, failed, ignored, needs review) are mapped in the output ticket, not in the engine.
@@ -172,6 +176,25 @@ Findings F1 to F15 came from a read-only review of the design and test plan. Eac
 - **Where we differ from the reviewer's most likely reading:** (a) a withdrawal that fails for a client with no account still opens a zero account (D14); (b) a deposit cannot be disputed a second time, even after a resolve (D6); (c) a locked account refuses disputes and resolves too, so another open dispute stays held for a human (D4).
 - **Why:** these three follow the engineer's earlier decisions and the reasons recorded there; the check confirms they are consequences of those decisions, not accidents.
 - **Not in the repo:** the reviewer's files and notes stay outside it, because they were written from the task description.
+
+## D27 Accepted after the final review
+- **Do:** no change for these findings; the numbers or notes go in the README where marked.
+- **Why:** The reviewer's findings are right, but each is either a limit of this simple design, an input contract, or not worth the code now.
+- **F7 field size:** accepted under D23, numbers recorded there.
+- **F8 allocations per row:** about three heap allocations per row inside the csv iterator and two hash lookups per deposit. The speed gain of removing them is not measured, so no change.
+- **F9, F10 scale:** the id map could be packed smaller, and one engine per stream cannot be sharded without a shared id map (D9 needs ids unique across clients). README notes for the scaling section, not code.
+- **F11 closed stdout:** `>&-` still exits 0 because the standard library reopens a closed descriptor 1 as `/dev/null`. A pipe whose reader is gone gives exit 1 (tested). One line in the README.
+- **F12 skipped counts on a write failure:** if writing stdout fails the run ends with `error: ...` and the skip counts are not printed.
+- **F13 lookup duplicated between dispute and resolve/chargeback:** left as is; the two paths are short and tested.
+- **F15 file changed while read:** the input must not change during a run. README note.
+- **F6 wording in tracked files:** the engineer keeps the current wording.
+- **F14 trailing commas:** handled by changing D24 instead (empty trailing fields are tolerated).
+
+## D28 The engine refuses amounts that are not positive (F2)
+- **Do:** `deposit` and `withdraw` refuse an amount that is zero or negative with `NonPositive`, after the duplicate check: the id is burned and no account is opened. The category is failed. The parser already rejects zero and signs, so the CLI never reaches this; it protects the public library API.
+- **Why:** Approved as recommended after the final review. Through the library a negative withdrawal raised the balance and a negative deposit followed by a dispute left `held` negative.
+- **Rejected:** making every library export except `run` private instead.
+- **Tests:** three engine rows (negative deposit then a retry then a dispute, zero deposit, negative withdrawal then a retry) and the category table.
 
 ## Accepted without change
 - **F9 (locked account with another dispute open):** the rule stays; the held funds stay held for a human. A data file pins it. A resolve after a chargeback is ignored (the tx is final and the account is locked).
