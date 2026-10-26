@@ -143,6 +143,12 @@ Findings F1 to F15 came from a read-only review of the design and test plan. Eac
 - **Why:** Document it as a limit and add no cap per ticket for now.
 - **UNVERIFIED:** how much memory the reader's buffer takes for one very long line; not measured yet.
 
+## D24 Field count is checked first
+- **Do:** a row with more than four fields reports too-many-fields before any field error, and the tx id still burns when the row is a deposit or withdrawal whose tx parsed. An unknown type with extra fields reports too-many-fields and burns nothing.
+- **Why:** The whole row is broken, so we report that, and tx 5 still burns.
+- **Rejected:** field errors first (the first implementation did this; no test pinned the order).
+- **Tests:** three rows in the parse table (bad client, bad amount, unknown type, each with a fifth field) and two in the burn table.
+
 ## Accepted without change
 - **F9 (locked account with another dispute open):** the rule stays; the held funds stay held for a human. A data file pins it. A resolve after a chargeback is ignored (the tx is final and the account is locked).
 - **F11 (invariants that cannot fail):** accepted. No random-operation test; multi-event table cases (double resolve, chargeback after resolve, two disputes then one chargeback) are added to the engine tables.
