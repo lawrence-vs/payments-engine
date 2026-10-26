@@ -214,7 +214,7 @@ impl Account {
     }
 
     pub fn total(&self) -> Option<Amount> {
-        Some(Amount::from_units(self.available.units().saturating_add(self.held.units())))
+        self.available.checked_add(self.held)
     }
 
     pub fn locked(&self) -> bool {
