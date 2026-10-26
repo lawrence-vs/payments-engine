@@ -22,7 +22,7 @@ enum Entry {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Dispute {
-    None,
+    Undisputed,
     Open,
     Resolved,
     ChargedBack,
@@ -81,14 +81,16 @@ impl Engine {
             burn_id(&mut self.entries, tx);
             return Err(EngineError::Locked { client });
         }
-        let Some((available, _)) = account.available.checked_add(amount).zip(
-            account.available.checked_add(account.held).and_then(|sum| sum.checked_add(amount)),
-        ) else {
+        let Some(available) = account
+            .available
+            .checked_add(amount)
+            .filter(|available| available.checked_add(account.held).is_some())
+        else {
             burn_id(&mut self.entries, tx);
             return Err(EngineError::Overflow { client, tx });
         };
         account.available = available;
-        self.entries.insert(tx, Entry::Deposit { client, amount, dispute: Dispute::None });
+        self.entries.insert(tx, Entry::Deposit { client, amount, dispute: Dispute::Undisputed });
         Ok(())
     }
 
@@ -128,7 +130,7 @@ impl Engine {
         if account.locked {
             return Err(EngineError::Locked { client: owner });
         }
-        if state != Dispute::None {
+        if state != Dispute::Undisputed {
             return Err(EngineError::AlreadyDisputed { tx });
         }
         let (Some(available), Some(held)) =
