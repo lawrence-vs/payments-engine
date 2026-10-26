@@ -320,9 +320,14 @@ fn read_events_table() {
             &["E D(1,1,10000)"],
         ),
         (
-            "quoted_fields",
+            "quotes_are_literal",
             b"type,client,tx,amount\n\"deposit\",\"1\",1,\"1.0\"\n",
-            &["E D(1,1,10000)"],
+            &["R 2 UnknownType"],
+        ),
+        (
+            "stray_quote_only_bad_rows",
+            b"type,client,tx,amount\n\"deposit,1,1,5\ndeposit,1,2,100\nwithdrawal,1,3,50\ndeposit,2,4,\"7\ndeposit,2,5,1\n",
+            &["R 2 UnknownType", "E D(1,2,1000000)", "E W(1,3,500000)", "R 5 BadAmount", "E D(2,5,10000)"],
         ),
         (
             "header_mid_file",
