@@ -5,6 +5,7 @@ edition = "2024"
 rust-version = "1.93"
 
 [dependencies]
+csv = "1.4.0"
 
 [lints.rust]
 unsafe_code = "forbid"
