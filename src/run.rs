@@ -1,3 +1,5 @@
+//! The whole pipeline: read rows, apply events, log rejected rows, write accounts.
+
 use std::io::{self, Read, Write};
 
 use crate::diagnostics::{Category, Diagnostics, category};

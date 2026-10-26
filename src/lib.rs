@@ -1,3 +1,5 @@
+//! Library behind the payments-engine binary: read transactions, apply them, write accounts.
+
 mod amount;
 mod diagnostics;
 mod engine;

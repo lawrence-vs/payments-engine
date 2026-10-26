@@ -1,3 +1,5 @@
+//! The typed events and ids that cross from parsing into the engine.
+
 use crate::Amount;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]

@@ -1,3 +1,5 @@
+//! Writes the accounts CSV sorted by client, and refuses to print a total that does not fit.
+
 use std::io::{self, Write};
 
 use crate::Engine;

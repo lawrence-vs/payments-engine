@@ -1,3 +1,5 @@
+//! Binary: checks the one path argument, opens it, runs the library, maps the result to an exit code.
+
 use std::fmt::Arguments;
 use std::fs::File;
 use std::io::{self, BufWriter, Write};

@@ -1,3 +1,5 @@
+//! Every money rule (balances, disputes, locks, used tx ids) with no I/O.
+
 use crate::{Amount, ClientId, Event, TxId};
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;

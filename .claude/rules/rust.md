@@ -13,7 +13,7 @@ paths:
 - Struct fields private; modules private unless the binary or `tests/` needs them. `lib.rs` declares the modules; `main.rs` is a thin binary over the lib.
 - File layout: `use`, consts, types (structs, enums), impls, free functions, then `#[cfg(test)] mod tests` last.
 - Unit tests: inline `mod tests` at the bottom of the file;
-- Comments: none by default. A one-line `///` only on a `pub` item whose name does not already say what it does, starting with the item's name. A one-line `//` only for a non-obvious why. None on trait impls (`from_str`, `fmt`) or simple getters. No multi-line blocks.
+- Comments: none by default. Each `src/*.rs` starts with a one-line `//!` saying the module's job (check.sh enforces it). A one-line `///` only on a `pub` item whose name does not already say what it does, starting with the item's name. A one-line `//` only for a non-obvious why. None on trait impls (`from_str`, `fmt`) or simple getters. No multi-line blocks.
 - No dependency without asking. No literal binary or file names in messages: `env!("CARGO_BIN_NAME")`, the path from args.
 
 ## Traps seen before (copy the relevant ones into every builder blueprint)

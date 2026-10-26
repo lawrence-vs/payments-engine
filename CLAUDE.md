@@ -14,7 +14,7 @@ Rules and decisions: `DESIGN.md`, `DECISIONS.md`, `PLAN.md` (read before changin
 
 ## Code rules
 In `.claude/rules/rust.md` (loads with any `.rs` file).
-- Comments: none by default; one-line `///` only on a `pub` item whose name does not say what it does; one-line `//` only for a non-obvious why; none on trait impls or simple getters; no multi-line blocks. Copy this into every blueprint.
+- Comments: none by default; each `src/*.rs` opens with a one-line `//!` module doc (check.sh); one-line `///` only on a `pub` item whose name does not say what it does; one-line `//` only for a non-obvious why; none on trait impls or simple getters; no multi-line blocks. Copy this into every blueprint.
 
 ## Tests
 - Table-driven: named cases, inputs, expected output. Match errors by variant, never by message. A loop collects every failure before one assert.

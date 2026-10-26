@@ -1,3 +1,5 @@
+//! CSV rows to typed events, with header detection and the tx id of a bad row kept for burning.
+
 use std::fmt;
 use std::io::{self, Read};
 use std::str::FromStr;
