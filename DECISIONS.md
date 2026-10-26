@@ -27,6 +27,10 @@ Policies are the engineer's. Each row: what we do, why (engineer's words), rejec
 - **Rejected:** burn only invalid-content rows (a failed withdrawal could be retried); burn nothing.
 - **UNVERIFIED:** scope is deposit and withdrawal rows only; dispute, resolve and chargeback rows reference an existing id and burn nothing.
 
+- **Locked accounts:** a deposit or withdrawal refused because the account is locked burns its id too.
+- **Why (locked):** A tx id is used once, and a retry needs a new id to stay idempotent.
+- **Left for the review agent:** the engine takes any `Amount` in a deposit or withdrawal; only the parser makes sure it is positive.
+
 ## D3 Bad rows and exit code
 - **Do:** log skipped rows (row number, field, category; never the raw text) up to one shared cap of 100 lines, then count per reason (bad, failed, ignored, needs review) and print the counts at the end, so review errors always show as a count (D20). Exit 0 if the file was read; exit 1 only for open, read or write failure; exit 2 unless exactly one input path is given (D21).
 - **Why:** 100 rows is enough to diagnose the issue causing skipped rows and see the pattern. If the system scales it is better to raise it; for this design constraint 100 is fine.
