@@ -202,13 +202,17 @@ fn reject(error: ParseError, burn: Option<TxId>) -> Rejected {
 }
 
 fn parse_record(row: u64, record: &ByteRecord) -> Result<Event, Rejected> {
-    let kind = parse_kind(row, record).map_err(|error| reject(error, None))?;
-    let client = parse_client(row, record);
+    let kind = parse_kind(row, record);
     let tx = parse_tx(row, record);
-    let burn = match (kind.moves_money(), tx.as_ref()) {
-        (true, Ok(tx)) => Some(*tx),
+    let burn = match (&kind, &tx) {
+        (Ok(kind), Ok(tx)) if kind.moves_money() => Some(*tx),
         _ => None,
     };
+    if record.len() > MAX_FIELDS {
+        return Err(reject(ParseError::TooManyFields { row }, burn));
+    }
+    let kind = kind.map_err(|error| reject(error, None))?;
+    let client = parse_client(row, record);
     build(row, kind, record, client, tx).map_err(|error| reject(error, burn))
 }
 
@@ -268,17 +272,13 @@ fn build(
 ) -> Result<Event, ParseError> {
     let client = client?;
     let tx = tx?;
-    let event = match kind {
+    Ok(match kind {
         Kind::Deposit => Event::Deposit { client, tx, amount: parse_amount(row, record)? },
         Kind::Withdrawal => Event::Withdrawal { client, tx, amount: parse_amount(row, record)? },
         Kind::Dispute => Event::Dispute { client, tx },
         Kind::Resolve => Event::Resolve { client, tx },
         Kind::Chargeback => Event::Chargeback { client, tx },
-    };
-    if record.len() > MAX_FIELDS {
-        return Err(ParseError::TooManyFields { row });
-    }
-    Ok(event)
+    })
 }
 
 #[cfg(test)]
