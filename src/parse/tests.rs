@@ -182,6 +182,14 @@ fn parse_record_table() {
             &["dispute", "1"],
             Err(ParseError::MissingField { row: 1, field: Field::Tx }),
         ),
+        ("ok_empty_fifth_field", &["deposit", "1", "1", "1.0", ""], Ok(deposit(1, 1, 10000))),
+        ("ok_empty_sixth_fields", &["deposit", "1", "1", "1.0", "", ""], Ok(deposit(1, 1, 10000))),
+        ("ok_dispute_empty_extras", &["dispute", "1", "1", "", ""], Ok(dispute(1, 1))),
+        (
+            "rej_value_after_empty_field",
+            &["deposit", "1", "1", "1.0", "", "x"],
+            Err(ParseError::TooManyFields { row: 1 }),
+        ),
         (
             "rej_five_fields",
             &["deposit", "1", "1", "1", "x"],
@@ -333,6 +341,11 @@ fn read_events_table() {
             "header_mid_file",
             b"type,client,tx,amount\ndeposit,1,1,1.0\ntype,client,tx,amount\n",
             &["E D(1,1,10000)", "R 3 UnknownType"],
+        ),
+        (
+            "trailing_commas_everywhere",
+            b"type,client,tx,amount,\ndeposit,1,1,1.0,\ndispute,1,1,,\n",
+            &["E D(1,1,10000)", "E Dispute(1,1)"],
         ),
         (
             "row_numbers",
