@@ -1,0 +1,5 @@
+type, client, tx, amount
+dispute,9,99
+resolve,9,99
+chargeback,9,99
+deposit,1,1,1

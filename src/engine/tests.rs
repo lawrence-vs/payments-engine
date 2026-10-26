@@ -119,10 +119,22 @@ fn engine_table() {
             &[(1, 0, 100, false)],
         ),
         (
-            "burned_id_blocks_deposit_and_opens_account",
+            "burned_id_blocks_deposit_and_opens_no_account",
             &[Step::Burn(5), Step::Apply(dep(1, 5, 10))],
             &[Ok(()), Err(EngineError::DuplicateTx { tx: TxId::new(5) })],
-            &[(1, 0, 0, false)],
+            &[],
+        ),
+        (
+            "duplicate_deposit_from_new_client_opens_no_account",
+            &[Step::Apply(dep(1, 1, 10)), Step::Apply(dep(2, 1, 5))],
+            &[Ok(()), Err(EngineError::DuplicateTx { tx: TxId::new(1) })],
+            &[(1, 10, 0, false)],
+        ),
+        (
+            "duplicate_withdrawal_from_new_client_opens_no_account",
+            &[Step::Apply(dep(1, 1, 10)), Step::Apply(wd(2, 1, 5))],
+            &[Ok(()), Err(EngineError::DuplicateTx { tx: TxId::new(1) })],
+            &[(1, 10, 0, false)],
         ),
         (
             "burn_keeps_existing_entry",

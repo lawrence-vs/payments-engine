@@ -28,7 +28,7 @@ Each stage can be tested without the others. The engine never sees CSV. A row th
 Every rejected deposit or withdrawal row with a parseable id records that id as Rejected, only if the id is not already in the map (D15).
 A rejected event changes nothing. A dispute computes available and held, then stores both.
 A deposit is also rejected if available + held + amount would not fit in `i64` (D16).
-An account is opened by any deposit or withdrawal row that reaches the engine, even a failed one; dispute, resolve and chargeback for an unknown client leave no trace (D14).
+An account is opened by a deposit or withdrawal row that reaches the balance checks, even if it then fails there; a row refused as a duplicate tx id opens none; dispute, resolve and chargeback for an unknown client leave no trace (D14).
 Available may go negative after a dispute. Invariants the rule tables assert: total = available + held, held >= 0.
 
 ## Output
