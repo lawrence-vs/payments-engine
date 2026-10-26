@@ -1,0 +1,22 @@
+[package]
+name = "payments-engine"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.93"
+
+[dependencies]
+
+[lints.rust]
+unsafe_code = "forbid"
+unreachable_pub = "warn"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+arithmetic_side_effects = "warn"
+indexing_slicing = "warn"
+cast_possible_truncation = "warn"

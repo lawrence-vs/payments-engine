@@ -1,0 +1,11 @@
+/target
+*.profraw
+perf.data*
+flamegraph.svg
+.DS_Store
+.idea/
+.vscode/
+.claude/settings.local.json
+/data/
+/accounts.csv
+transactions.csv
