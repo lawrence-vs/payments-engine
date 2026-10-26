@@ -31,7 +31,7 @@ In `.claude/rules/rust.md` (loads with any `.rs` file).
 - Sonnet main (plans, reviews, re-runs the gate itself), Haiku subagent builds from a blueprint, Opus for one design attack and the final review.
 - Facts are run before trusted; unchecked claims are UNVERIFIED. Policies are the engineer's, in `DECISIONS.md` with rejected options.
 - No MCP servers or connectors: `/mcp` must list nothing before the first prompt.
-- Branch per ticket `t-NN-<slug>`; `tests: red <slice>` then `feat: green <slice>`; the engineer commits. `git status` before every commit.
+- Branch per ticket `t-NN-<slug>`; `tests: red <slice>` then `feat: green <slice>`. Claude can do the git steps after the engineer says commit; the engineer reads every diff before a merge. `git status` before every commit.
 
 ## Do not
 - Put the task brief, its text, or any company name in this repo.
