@@ -1,3 +1,5 @@
+//! Stderr reporting: the first 100 rejected rows in detail, then a count per category.
+
 use std::fmt::{self, Display};
 use std::io::Write;
 

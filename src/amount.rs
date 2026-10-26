@@ -1,3 +1,5 @@
+//! Exact money as ten-thousandths in an `i64`, with its decimal parser and four-place display.
+
 use std::fmt;
 use std::str::FromStr;
 
