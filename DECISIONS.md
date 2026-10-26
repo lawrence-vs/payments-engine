@@ -115,6 +115,9 @@ Findings F1 to F15 came from a read-only review of the design and test plan. Eac
 - **Do:** a deposit is rejected, and its id burned, if available + held + amount would no longer fit in `i64`. With that kept true, a resolve or chargeback cannot overflow; a dispute still uses checked arithmetic. Display uses the absolute value as unsigned so the minimum `i64` prints.
 - **Why:** A total we cannot print is worse than a refused deposit, so the deposit fails.
 - **Tests:** the maximum amount, dispute, then a 0.0001 deposit is rejected; display of minimum and maximum.
+- **If the rule ever breaks (U1):** `Account::total()` returns an `Option` from a checked add, and a total that does not fit ends the run with an error (exit 1) instead of printing a clamped number. `write_accounts` checks every account's total before it writes the header or any row, so nothing partial is written.
+- **Why (U1):** If the rule above ever breaks, the program must not print a clamped wrong number. A total we cannot print should fail the run.
+- **Tests (U1):** `account_total_table` (engine) and `total_overflow_is_an_error_and_writes_nothing` (output), the second with the broken account first, last and alone.
 
 ## D17 Burning ids of rows that fail to parse (F2)
 - **Do:** the tx field is parsed on its own. A row of type deposit or withdrawal that fails on any other field returns an error that carries the tx id and the row kind, and the engine gets a call to burn that id. Other row types burn nothing.
