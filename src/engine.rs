@@ -82,6 +82,10 @@ impl Engine {
         if self.entries.contains_key(&tx) {
             return Err(EngineError::DuplicateTx { tx });
         }
+        if amount <= Amount::ZERO {
+            burn_id(&mut self.entries, tx);
+            return Err(EngineError::NonPositive { tx });
+        }
         let account = self.accounts.entry(client).or_insert_with(Account::new);
         if account.locked {
             burn_id(&mut self.entries, tx);
@@ -103,6 +107,10 @@ impl Engine {
     fn withdraw(&mut self, client: ClientId, tx: TxId, amount: Amount) -> Result<(), EngineError> {
         if self.entries.contains_key(&tx) {
             return Err(EngineError::DuplicateTx { tx });
+        }
+        if amount <= Amount::ZERO {
+            burn_id(&mut self.entries, tx);
+            return Err(EngineError::NonPositive { tx });
         }
         let account = self.accounts.entry(client).or_insert_with(Account::new);
         if account.locked {
