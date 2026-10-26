@@ -39,6 +39,7 @@ pub enum EngineError {
     NotUnderDispute { tx: TxId },
     ClientMismatch { client: ClientId, tx: TxId },
     AlreadyDisputed { tx: TxId },
+    NonPositive { tx: TxId },
 }
 
 const _: () = assert!(std::mem::size_of::<Entry>() == 16);
@@ -52,6 +53,11 @@ impl Default for Engine {
 impl Engine {
     pub fn new() -> Self {
         Self { accounts: BTreeMap::new(), entries: HashMap::new() }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn plant_account(&mut self, client: ClientId, available: Amount, held: Amount) {
+        self.accounts.insert(client, Account { available, held, locked: false });
     }
 
     pub fn apply(&mut self, event: Event) -> Result<(), EngineError> {
@@ -76,6 +82,10 @@ impl Engine {
         if self.entries.contains_key(&tx) {
             return Err(EngineError::DuplicateTx { tx });
         }
+        if amount <= Amount::ZERO {
+            burn_id(&mut self.entries, tx);
+            return Err(EngineError::NonPositive { tx });
+        }
         let account = self.accounts.entry(client).or_insert_with(Account::new);
         if account.locked {
             burn_id(&mut self.entries, tx);
@@ -97,6 +107,10 @@ impl Engine {
     fn withdraw(&mut self, client: ClientId, tx: TxId, amount: Amount) -> Result<(), EngineError> {
         if self.entries.contains_key(&tx) {
             return Err(EngineError::DuplicateTx { tx });
+        }
+        if amount <= Amount::ZERO {
+            burn_id(&mut self.entries, tx);
+            return Err(EngineError::NonPositive { tx });
         }
         let account = self.accounts.entry(client).or_insert_with(Account::new);
         if account.locked {
@@ -208,9 +222,8 @@ impl Account {
         self.held
     }
 
-    pub fn total(&self) -> Amount {
-        // Saturating is a formality: every change stores available and held only if their sum fits.
-        Amount::from_units(self.available.units().saturating_add(self.held.units()))
+    pub fn total(&self) -> Option<Amount> {
+        self.available.checked_add(self.held)
     }
 
     pub fn locked(&self) -> bool {
@@ -253,6 +266,9 @@ impl fmt::Display for EngineError {
             }
             Self::AlreadyDisputed { tx } => {
                 write!(f, "transaction {} was already disputed", tx.get())
+            }
+            Self::NonPositive { tx } => {
+                write!(f, "transaction {} has no positive amount", tx.get())
             }
         }
     }

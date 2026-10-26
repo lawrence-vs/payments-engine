@@ -9,7 +9,7 @@ Rules and decisions: `DESIGN.md`, `DECISIONS.md`, `PLAN.md` (read before changin
 ## Contract
 - stdout: accounts CSV only, 4 decimals
 - stderr: logs
-- exit 0 done, 1 I/O failure, 2 no input path
+- exit 0 done, 1 I/O failure, 2 unless exactly one input path
 - input: type, client (u16), tx (u32), amount (≤ 4 places), spaces allowed
 
 ## Code rules

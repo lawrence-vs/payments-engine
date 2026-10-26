@@ -2,6 +2,7 @@ use std::fmt;
 use std::str::FromStr;
 
 const SCALE: i64 = 10_000;
+const SCALE_U64: u64 = SCALE.unsigned_abs();
 const FRACTION_PLACES: [i64; 4] = [1000, 100, 10, 1];
 
 /// Amount is a money value held as a count of ten-thousandths.
@@ -73,9 +74,8 @@ impl FromStr for Amount {
 impl fmt::Display for Amount {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let magnitude = self.0.unsigned_abs();
-        let scale = SCALE.unsigned_abs();
         let sign = if self.0 < 0 { "-" } else { "" };
-        write!(f, "{sign}{}.{:04}", magnitude.div_euclid(scale), magnitude.rem_euclid(scale))
+        write!(f, "{sign}{}.{:04}", magnitude / SCALE_U64, magnitude % SCALE_U64)
     }
 }
 

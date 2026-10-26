@@ -98,6 +98,7 @@ pub(crate) fn category(error: &EngineError) -> Category {
         | EngineError::NotUnderDispute { .. }
         | EngineError::ClientMismatch { .. } => Category::Ignored,
         EngineError::AlreadyDisputed { .. } => Category::NeedsReview,
+        EngineError::NonPositive { .. } => Category::Failed,
     }
 }
 

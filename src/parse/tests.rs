@@ -92,7 +92,7 @@ fn token(item: Result<Row, io::Error>) -> String {
     match item {
         Err(_) => "IO".to_string(),
         Ok(Row::MissingHeader) => "H".to_string(),
-        Ok(Row::Event(event)) => format!("E {}", event_text(&event)),
+        Ok(Row::Event { event, .. }) => format!("E {}", event_text(&event)),
         Ok(Row::Rejected(rejected)) => {
             let (row, name) = variant_name(rejected.error());
             format!("R {row} {name}")
@@ -181,6 +181,14 @@ fn parse_record_table() {
             "rej_dispute_missing_tx",
             &["dispute", "1"],
             Err(ParseError::MissingField { row: 1, field: Field::Tx }),
+        ),
+        ("ok_empty_fifth_field", &["deposit", "1", "1", "1.0", ""], Ok(deposit(1, 1, 10000))),
+        ("ok_empty_sixth_fields", &["deposit", "1", "1", "1.0", "", ""], Ok(deposit(1, 1, 10000))),
+        ("ok_dispute_empty_extras", &["dispute", "1", "1", "", ""], Ok(dispute(1, 1))),
+        (
+            "rej_value_after_empty_field",
+            &["deposit", "1", "1", "1.0", "", "x"],
+            Err(ParseError::TooManyFields { row: 1 }),
         ),
         (
             "rej_five_fields",
@@ -320,14 +328,24 @@ fn read_events_table() {
             &["E D(1,1,10000)"],
         ),
         (
-            "quoted_fields",
+            "quotes_are_literal",
             b"type,client,tx,amount\n\"deposit\",\"1\",1,\"1.0\"\n",
-            &["E D(1,1,10000)"],
+            &["R 2 UnknownType"],
+        ),
+        (
+            "stray_quote_only_bad_rows",
+            b"type,client,tx,amount\n\"deposit,1,1,5\ndeposit,1,2,100\nwithdrawal,1,3,50\ndeposit,2,4,\"7\ndeposit,2,5,1\n",
+            &["R 2 UnknownType", "E D(1,2,1000000)", "E W(1,3,500000)", "R 5 BadAmount", "E D(2,5,10000)"],
         ),
         (
             "header_mid_file",
             b"type,client,tx,amount\ndeposit,1,1,1.0\ntype,client,tx,amount\n",
             &["E D(1,1,10000)", "R 3 UnknownType"],
+        ),
+        (
+            "trailing_commas_everywhere",
+            b"type,client,tx,amount,\ndeposit,1,1,1.0,\ndispute,1,1,,\n",
+            &["E D(1,1,10000)", "E Dispute(1,1)"],
         ),
         (
             "row_numbers",

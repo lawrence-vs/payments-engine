@@ -113,6 +113,32 @@ fn engine_table() {
             &[(1, 6, 0, false)],
         ),
         (
+            "negative_deposit_refused_and_burned",
+            &[Step::Apply(dep(1, 1, -5)), Step::Apply(dep(1, 1, 5)), Step::Apply(disp(1, 1))],
+            &[
+                Err(EngineError::NonPositive { tx: TxId::new(1) }),
+                Err(EngineError::DuplicateTx { tx: TxId::new(1) }),
+                Err(EngineError::NotDisputable { tx: TxId::new(1) }),
+            ],
+            &[],
+        ),
+        (
+            "zero_deposit_refused",
+            &[Step::Apply(dep(1, 1, 0))],
+            &[Err(EngineError::NonPositive { tx: TxId::new(1) })],
+            &[],
+        ),
+        (
+            "negative_withdrawal_refused_and_burned",
+            &[Step::Apply(dep(1, 1, 10)), Step::Apply(wd(1, 2, -5)), Step::Apply(wd(1, 2, 5))],
+            &[
+                Ok(()),
+                Err(EngineError::NonPositive { tx: TxId::new(2) }),
+                Err(EngineError::DuplicateTx { tx: TxId::new(2) }),
+            ],
+            &[(1, 10, 0, false)],
+        ),
+        (
             "withdrawal_reusing_deposit_id_keeps_the_deposit",
             &[Step::Apply(dep(1, 1, 100)), Step::Apply(wd(1, 1, 40)), Step::Apply(disp(1, 1))],
             &[Ok(()), Err(EngineError::DuplicateTx { tx: TxId::new(1) }), Ok(())],
@@ -360,6 +386,7 @@ fn engine_table() {
                 Step::Apply(disp(1, 1)),
                 Step::Apply(cb(1, 1)),
                 Step::Apply(wd(1, 3, 5)),
+                Step::Apply(wd(1, 3, 5)),
             ],
             &[
                 Ok(()),
@@ -367,6 +394,7 @@ fn engine_table() {
                 Ok(()),
                 Ok(()),
                 Err(EngineError::Locked { client: ClientId::new(1) }),
+                Err(EngineError::DuplicateTx { tx: TxId::new(3) }),
             ],
             &[(1, 10, 0, true)],
         ),
@@ -507,7 +535,7 @@ fn engine_table() {
             ));
         }
         for (client, account) in engine.accounts() {
-            if sum_units(account.available(), account.held()) != Some(account.total().units())
+            if sum_units(account.available(), account.held()) != account.total().map(Amount::units)
                 || account.held().units() < 0
             {
                 failures.push(format!(
@@ -516,6 +544,34 @@ fn engine_table() {
                     account.total()
                 ));
             }
+        }
+    }
+    assert!(failures.is_empty(), "{failures:#?}");
+}
+
+#[test]
+fn account_total_table() {
+    let cases: &[(&str, i64, i64, Option<i64>)] = &[
+        ("sum", 5, 10, Some(15)),
+        ("both_zero", 0, 0, Some(0)),
+        ("negative_available", -8, 10, Some(2)),
+        ("max_available_no_held", i64::MAX, 0, Some(i64::MAX)),
+        ("min_available_no_held", i64::MIN, 0, Some(i64::MIN)),
+        ("negative_max_plus_max", -i64::MAX, i64::MAX, Some(0)),
+        ("max_plus_one", i64::MAX, 1, None),
+        ("max_plus_max", i64::MAX, i64::MAX, None),
+    ];
+
+    let mut failures = Vec::new();
+    for (name, available, held, expected) in cases {
+        let account = Account {
+            available: Amount::from_units(*available),
+            held: Amount::from_units(*held),
+            locked: false,
+        };
+        let got = account.total().map(Amount::units);
+        if got != *expected {
+            failures.push(format!("{name}: got {got:?}, want {expected:?}"));
         }
     }
     assert!(failures.is_empty(), "{failures:#?}");

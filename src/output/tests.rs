@@ -119,3 +119,33 @@ fn write_error_propagates() {
     let result = write_accounts(&mut AlwaysFails, &engine);
     assert!(result.is_err(), "write error was not returned: {result:?}");
 }
+
+type PlantedCase<'a> = (&'a str, &'a [(u16, i64, i64)]);
+
+#[test]
+fn total_overflow_is_an_error_and_writes_nothing() {
+    let cases: &[PlantedCase<'_>] = &[
+        ("broken_only", &[(1, i64::MAX, 1)]),
+        ("healthy_then_broken", &[(1, 10, 0), (2, i64::MAX, 1)]),
+        ("broken_then_healthy", &[(1, i64::MAX, 1), (2, 10, 0)]),
+    ];
+
+    let mut failures = Vec::new();
+    for (name, accounts) in cases {
+        let mut engine = Engine::new();
+        for (client, available, held) in *accounts {
+            engine.plant_account(
+                ClientId::new(*client),
+                Amount::from_units(*available),
+                Amount::from_units(*held),
+            );
+        }
+        let mut out: Vec<u8> = Vec::new();
+        let result = write_accounts(&mut out, &engine);
+        let kind = result.as_ref().err().map(io::Error::kind);
+        if kind != Some(io::ErrorKind::InvalidData) || !out.is_empty() {
+            failures.push(format!("{name}: error kind {kind:?}, wrote {} bytes", out.len()));
+        }
+    }
+    assert!(failures.is_empty(), "{failures:#?}");
+}
