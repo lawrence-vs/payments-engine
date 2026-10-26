@@ -41,6 +41,7 @@ fn category_table() {
         ("not_under_dispute", EngineError::NotUnderDispute { tx }, Category::Ignored),
         ("client_mismatch", EngineError::ClientMismatch { client, tx }, Category::Ignored),
         ("already_disputed", EngineError::AlreadyDisputed { tx }, Category::NeedsReview),
+        ("non_positive", EngineError::NonPositive { tx }, Category::Failed),
     ];
     let mut failures = Vec::new();
     for (name, error, want) in cases {

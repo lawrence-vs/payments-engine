@@ -39,6 +39,7 @@ pub enum EngineError {
     NotUnderDispute { tx: TxId },
     ClientMismatch { client: ClientId, tx: TxId },
     AlreadyDisputed { tx: TxId },
+    NonPositive { tx: TxId },
 }
 
 const _: () = assert!(std::mem::size_of::<Entry>() == 16);
@@ -257,6 +258,9 @@ impl fmt::Display for EngineError {
             }
             Self::AlreadyDisputed { tx } => {
                 write!(f, "transaction {} was already disputed", tx.get())
+            }
+            Self::NonPositive { tx } => {
+                write!(f, "transaction {} has no positive amount", tx.get())
             }
         }
     }

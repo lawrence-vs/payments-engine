@@ -113,6 +113,32 @@ fn engine_table() {
             &[(1, 6, 0, false)],
         ),
         (
+            "negative_deposit_refused_and_burned",
+            &[Step::Apply(dep(1, 1, -5)), Step::Apply(dep(1, 1, 5)), Step::Apply(disp(1, 1))],
+            &[
+                Err(EngineError::NonPositive { tx: TxId::new(1) }),
+                Err(EngineError::DuplicateTx { tx: TxId::new(1) }),
+                Err(EngineError::NotDisputable { tx: TxId::new(1) }),
+            ],
+            &[],
+        ),
+        (
+            "zero_deposit_refused",
+            &[Step::Apply(dep(1, 1, 0))],
+            &[Err(EngineError::NonPositive { tx: TxId::new(1) })],
+            &[],
+        ),
+        (
+            "negative_withdrawal_refused_and_burned",
+            &[Step::Apply(dep(1, 1, 10)), Step::Apply(wd(1, 2, -5)), Step::Apply(wd(1, 2, 5))],
+            &[
+                Ok(()),
+                Err(EngineError::NonPositive { tx: TxId::new(2) }),
+                Err(EngineError::DuplicateTx { tx: TxId::new(2) }),
+            ],
+            &[(1, 10, 0, false)],
+        ),
+        (
             "withdrawal_reusing_deposit_id_keeps_the_deposit",
             &[Step::Apply(dep(1, 1, 100)), Step::Apply(wd(1, 1, 40)), Step::Apply(disp(1, 1))],
             &[Ok(()), Err(EngineError::DuplicateTx { tx: TxId::new(1) }), Ok(())],
