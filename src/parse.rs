@@ -89,7 +89,7 @@ impl Rejected {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Row {
-    Event(Event),
+    Event { row: u64, event: Event },
     Rejected(Rejected),
     MissingHeader,
 }
@@ -198,7 +198,7 @@ fn is_header(record: &ByteRecord) -> bool {
 
 fn classify(row: u64, record: &ByteRecord) -> Row {
     match parse_record(row, record) {
-        Ok(event) => Row::Event(event),
+        Ok(event) => Row::Event { row, event },
         Err(rejected) => Row::Rejected(rejected),
     }
 }

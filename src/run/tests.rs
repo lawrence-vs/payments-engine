@@ -44,10 +44,16 @@ fn run_table() {
             "warning: first line is not a header, read as data\n",
         ),
         (
+            "engine_refusals_name_their_row",
+            "type,client,tx,amount\ndeposit,1,1,10\nwithdrawal,1,2,50\ndispute,1,9\n",
+            "client,available,held,total,locked\n1,10.0000,0.0000,10.0000,false\n",
+            "failed: row 3: client 1 has insufficient funds for transaction 2\nignored: row 4: transaction 9 is unknown\nskipped failed: 1\nskipped ignored: 1\n",
+        ),
+        (
             "parse_failure_burns_id_end_to_end",
             "type,client,tx,amount\ndeposit,1,5,abc\ndeposit,2,5,7\n",
             "client,available,held,total,locked\n",
-            "bad: row 2: amount is malformed\nignored: transaction 5 already exists\nskipped bad: 1\nskipped ignored: 1\n",
+            "bad: row 2: amount is malformed\nignored: row 3: transaction 5 already exists\nskipped bad: 1\nskipped ignored: 1\n",
         ),
     ];
     let mut failures = Vec::new();

@@ -18,7 +18,7 @@ pub fn run<R: Read, W: Write, E: Write>(input: R, mut out: W, err: E) -> io::Res
                     engine.burn(tx);
                 }
             }
-            Row::Event(event) => {
+            Row::Event { event, .. } => {
                 if let Err(error) = engine.apply(event) {
                     diagnostics.reject(category(&error), error);
                 }

@@ -92,7 +92,7 @@ fn token(item: Result<Row, io::Error>) -> String {
     match item {
         Err(_) => "IO".to_string(),
         Ok(Row::MissingHeader) => "H".to_string(),
-        Ok(Row::Event(event)) => format!("E {}", event_text(&event)),
+        Ok(Row::Event { event, .. }) => format!("E {}", event_text(&event)),
         Ok(Row::Rejected(rejected)) => {
             let (row, name) = variant_name(rejected.error());
             format!("R {row} {name}")
