@@ -101,7 +101,7 @@ Findings F1 to F15 came from a read-only review of the design and test plan. Eac
 - **Do:** a deposit or withdrawal row opens the client's account when it reaches the balance checks, even if it then fails there (locked, insufficient funds, overflow). A row refused as a duplicate tx id opens no account. Dispute, resolve and chargeback rows for an unknown client leave no trace.
 - **Why:** If a client does not exist we create a new record, so a deposit or withdrawal row that reaches the balance checks opens it even if it fails. A duplicate id is a partner error, so it leaves no trace. Disputes, resolves and chargebacks for unknown clients leave no trace.
 - **Rejected:** open only after an accepted deposit; open on any row naming the client; open the account before the duplicate check (the first version did this).
-- **Reading, UNVERIFIED with the engineer:** "leaves no trace" means no account and no balance or id change. The refused row is still counted and logged as ignored (D9, D20).
+- **Meaning of "no trace":** no account, balance or id change, but the refused row is logged and counted as ignored (D9, D20).
 - **Tests:** engine rows for a duplicate deposit and a duplicate withdrawal from a new client; run table; data pair 8.
 
 ## D15 A rejected event changes nothing (F1, F6, F7)
