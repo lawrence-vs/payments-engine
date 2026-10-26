@@ -46,7 +46,7 @@ fn run_table() {
         (
             "parse_failure_burns_id_end_to_end",
             "type,client,tx,amount\ndeposit,1,5,abc\ndeposit,2,5,7\n",
-            "client,available,held,total,locked\n2,0.0000,0.0000,0.0000,false\n",
+            "client,available,held,total,locked\n",
             "bad: row 2: amount is malformed\nignored: transaction 5 already exists\nskipped bad: 1\nskipped ignored: 1\n",
         ),
     ];
