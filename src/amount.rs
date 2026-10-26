@@ -1,67 +1,85 @@
 use std::fmt;
 use std::str::FromStr;
 
-/// Amount is a money value held as a count of ten-thousandths (1.0 = 10000).
-/// It is used for transaction amounts and for signed balances.
+const SCALE: i64 = 10_000;
+const FRACTION_PLACES: [i64; 4] = [1000, 100, 10, 1];
+
+/// Amount is a money value held as a count of ten-thousandths.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Amount(i64);
 
-/// AmountError is the reason a text value could not become an Amount.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AmountError {
-    /// Empty means the text had no characters at all.
     Empty,
-    /// Malformed means the text had a character or shape that is not a decimal.
     Malformed,
-    /// TooManyDecimals means the fraction had more than four digits.
     TooManyDecimals,
-    /// Overflow means the value does not fit in the i64 range.
     Overflow,
 }
 
 impl Amount {
-    /// ZERO is the Amount with no value.
     pub const ZERO: Amount = Amount(0);
 
-    /// from_units builds an Amount from a count of ten-thousandths.
     pub const fn from_units(units: i64) -> Amount {
         Amount(units)
     }
 
-    /// units returns the count of ten-thousandths.
     pub const fn units(self) -> i64 {
         self.0
     }
 
-    /// checked_add returns the sum, or None on overflow.
-    pub fn checked_add(self, _rhs: Amount) -> Option<Amount> {
-        Some(self)
+    pub fn checked_add(self, rhs: Amount) -> Option<Amount> {
+        self.0.checked_add(rhs.0).map(Amount)
     }
 
-    /// checked_sub returns the difference, or None on overflow.
-    pub fn checked_sub(self, _rhs: Amount) -> Option<Amount> {
-        Some(self)
+    pub fn checked_sub(self, rhs: Amount) -> Option<Amount> {
+        self.0.checked_sub(rhs.0).map(Amount)
     }
+}
+
+fn digit(c: char) -> Option<i64> {
+    c.to_digit(10).map(i64::from)
 }
 
 impl FromStr for Amount {
     type Err = AmountError;
 
-    /// from_str parses a decimal text value with at most four fraction digits.
-    fn from_str(_s: &str) -> Result<Self, Self::Err> {
-        Ok(Amount(0))
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.is_empty() {
+            return Err(AmountError::Empty);
+        }
+        let only_digits_and_dot = s.chars().all(|c| c.is_ascii_digit() || c == '.');
+        let has_digit = s.chars().any(|c| c.is_ascii_digit());
+        if !only_digits_and_dot || !has_digit || s.matches('.').count() > 1 {
+            return Err(AmountError::Malformed);
+        }
+        let (whole, fraction) = s.split_once('.').unwrap_or((s, ""));
+        if fraction.len() > FRACTION_PLACES.len() {
+            return Err(AmountError::TooManyDecimals);
+        }
+        let whole_units = whole
+            .chars()
+            .try_fold(0_i64, |acc, c| acc.checked_mul(10)?.checked_add(digit(c)?))
+            .ok_or(AmountError::Overflow)?;
+        let scaled = whole_units.checked_mul(SCALE).ok_or(AmountError::Overflow)?;
+        let fraction_units = fraction
+            .chars()
+            .zip(FRACTION_PLACES)
+            .try_fold(0_i64, |acc, (c, place)| acc.checked_add(digit(c)?.checked_mul(place)?))
+            .ok_or(AmountError::Overflow)?;
+        scaled.checked_add(fraction_units).map(Amount).ok_or(AmountError::Overflow)
     }
 }
 
 impl fmt::Display for Amount {
-    /// fmt writes the value with exactly four decimal places.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("0")
+        let magnitude = self.0.unsigned_abs();
+        let scale = SCALE.unsigned_abs();
+        let sign = if self.0 < 0 { "-" } else { "" };
+        write!(f, "{sign}{}.{:04}", magnitude.div_euclid(scale), magnitude.rem_euclid(scale))
     }
 }
 
 impl fmt::Display for AmountError {
-    /// fmt writes a short description of the error.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let text = match self {
             Self::Empty => "amount is empty",
