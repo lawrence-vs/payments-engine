@@ -8,11 +8,13 @@ Reads a CSV of transactions (deposit, withdrawal, dispute, resolve, chargeback) 
 cargo run --release -- transactions.csv > accounts.csv
 ```
 
+```
+cargo run --release --example gen -- 1000 1 10 > transactions.csv
+```
+
 - stdout: only the accounts CSV, `client,available,held,total,locked`, four decimal places, sorted by client.
 - stderr: skipped rows, the first 100 in detail, then one count per reason, so a bad file can't flood stderr.
 - Exit codes: `0` finished, `1` I/O failure, `2` not exactly one input path.
-
-Try it on a sample: `cargo run -- tests/data/basic.in.csv`.
 
 ## Test
 
