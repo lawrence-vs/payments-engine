@@ -161,6 +161,13 @@ Findings F1 to F15 came from a read-only review of the design and test plan. Eac
 - **Rejected:** opening an account from a row that failed to parse (the client may not be readable).
 - **Consequence:** for `deposit,7,1,abc` client 7 has no record, while `withdrawal,7,1,5` with no funds does (D14).
 
+## D26 Independent edge check (t-05)
+- **Do:** no engine change. Three data pairs added (withdrawal for an unknown client, exact decimal sums, extreme ids), pair count 21 to 24.
+- **What was checked:** a fresh reviewer, who had only the task description and none of our code or docs, wrote 52 edge inputs outside the repo. 33 had an output fixed by the task description and all 33 match. 19 were left open by the task description; every output is one of the reviewer's listed readings.
+- **Where we differ from the reviewer's most likely reading:** (a) a withdrawal that fails for a client with no account still opens a zero account (D14); (b) a deposit cannot be disputed a second time, even after a resolve (D6); (c) a locked account refuses disputes and resolves too, so another open dispute stays held for a human (D4).
+- **Why:** these three follow the engineer's earlier decisions and the reasons recorded there; the check confirms they are consequences of those decisions, not accidents.
+- **Not in the repo:** the reviewer's files and notes stay outside it, because they were written from the task description.
+
 ## Accepted without change
 - **F9 (locked account with another dispute open):** the rule stays; the held funds stay held for a human. A data file pins it. A resolve after a chargeback is ignored (the tx is final and the account is locked).
 - **F11 (invariants that cannot fail):** accepted. No random-operation test; multi-event table cases (double resolve, chargeback after resolve, two disputes then one chargeback) are added to the engine tables.

@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const PAIR_COUNT: usize = 21;
+const PAIR_COUNT: usize = 24;
 
 #[test]
 fn data_files() {
