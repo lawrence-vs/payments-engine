@@ -54,6 +54,11 @@ impl Engine {
         Self { accounts: BTreeMap::new(), entries: HashMap::new() }
     }
 
+    #[cfg(test)]
+    pub(crate) fn plant_account(&mut self, client: ClientId, available: Amount, held: Amount) {
+        self.accounts.insert(client, Account { available, held, locked: false });
+    }
+
     pub fn apply(&mut self, event: Event) -> Result<(), EngineError> {
         match event {
             Event::Deposit { client, tx, amount } => self.deposit(client, tx, amount),
@@ -208,9 +213,8 @@ impl Account {
         self.held
     }
 
-    pub fn total(&self) -> Amount {
-        // Saturating is a formality: every change stores available and held only if their sum fits.
-        Amount::from_units(self.available.units().saturating_add(self.held.units()))
+    pub fn total(&self) -> Option<Amount> {
+        Some(Amount::from_units(self.available.units().saturating_add(self.held.units())))
     }
 
     pub fn locked(&self) -> bool {
