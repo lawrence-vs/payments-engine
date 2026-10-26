@@ -62,7 +62,7 @@ impl<W: Write> Diagnostics<W> {
     }
 
     pub(crate) fn finish(mut self) {
-        let counts = self.counts();
+        let counts = &self.counts;
         let summary = [
             (Category::Bad, counts.bad),
             (Category::Failed, counts.failed),
@@ -76,6 +76,7 @@ impl<W: Write> Diagnostics<W> {
         }
     }
 
+    #[cfg(test)]
     pub(crate) fn counts(&self) -> &Counts {
         &self.counts
     }
