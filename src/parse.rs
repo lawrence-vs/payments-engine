@@ -52,7 +52,7 @@ impl fmt::Display for ParseError {
         match self {
             Self::UnknownType { row } => write!(f, "row {row}: unknown event type"),
             Self::MissingField { row, field } => write!(f, "row {row}: missing {}", field.name()),
-            Self::TooManyFields { row } => write!(f, "row {row}: more than {MAX_FIELDS} fields"),
+            Self::TooManyFields { row } => write!(f, "row {row}: a value after field {MAX_FIELDS}"),
             Self::NotUtf8 { row, field } => write!(f, "row {row}: {} is not UTF-8", field.name()),
             Self::BadClient { row } => write!(f, "row {row}: bad client id"),
             Self::BadTx { row } => write!(f, "row {row}: bad tx id"),
@@ -184,8 +184,13 @@ fn to_io(error: csv::Error) -> io::Error {
     }
 }
 
+fn has_extra_fields(record: &ByteRecord) -> bool {
+    record.iter().skip(MAX_FIELDS).any(|field| !field.is_empty())
+}
+
 fn is_header(record: &ByteRecord) -> bool {
-    record.len() == HEADER.len()
+    record.len() >= HEADER.len()
+        && !has_extra_fields(record)
         && HEADER.iter().zip(record.iter()).all(|(name, field)| {
             std::str::from_utf8(field).is_ok_and(|text| text.eq_ignore_ascii_case(name))
         })
@@ -209,7 +214,7 @@ fn parse_record(row: u64, record: &ByteRecord) -> Result<Event, Rejected> {
         (Ok(kind), Ok(tx)) if kind.moves_money() => Some(*tx),
         _ => None,
     };
-    if record.len() > MAX_FIELDS {
+    if has_extra_fields(record) {
         return Err(reject(ParseError::TooManyFields { row }, burn));
     }
     let kind = kind.map_err(|error| reject(error, None))?;
