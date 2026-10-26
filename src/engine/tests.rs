@@ -113,6 +113,12 @@ fn engine_table() {
             &[(1, 6, 0, false)],
         ),
         (
+            "withdrawal_reusing_deposit_id_keeps_the_deposit",
+            &[Step::Apply(dep(1, 1, 100)), Step::Apply(wd(1, 1, 40)), Step::Apply(disp(1, 1))],
+            &[Ok(()), Err(EngineError::DuplicateTx { tx: TxId::new(1) }), Ok(())],
+            &[(1, 0, 100, false)],
+        ),
+        (
             "burned_id_blocks_deposit_and_opens_account",
             &[Step::Burn(5), Step::Apply(dep(1, 5, 10))],
             &[Ok(()), Err(EngineError::DuplicateTx { tx: TxId::new(5) })],
