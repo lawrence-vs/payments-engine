@@ -6,11 +6,13 @@ Before t-01: Opus attack on `DESIGN.md` and the test plan; each finding answered
 
 | Ticket | Scope | Acceptance tests | Budget |
 |---|---|---|---|
-| t-01-money | `Amount` newtype, lenient parser, 4-place display, checked add and sub | string table: valid forms, `1.`, `.5`, rejects, max value and one over; display extremes (`0.0001`, `-0.0500`, `-8.0000`) | 120 / 150 |
-| t-02-parse | add `csv` (engineer approves); row to event; typed parse errors naming row and field; trim, CRLF, BOM, short rows, any-case type | whitespace, CRLF, BOM, short-row table; client above u16, tx above u32, non-numeric | 150 / 200 |
-| t-03-engine | engine, entry map, apply, lock, burn rule, rules for D4 to D9 | one case per rules-table row; invariant test over seeded random events | 220 / 350 |
-| t-04-io-cli | sorted writer through `BufWriter` with `flush`, bad-row cap and summary, exit codes, thin `main` | data files each shown red once; `tests/cli.rs` incl. missing file and closed stdout | 100 / 200 |
-| t-05-numbers-docs | 10^7-row memory and time run; confirm limits | measured numbers recorded for the README | small |
+| t-01-money | `Amount` newtype, lenient parser, 4-place display, checked add and sub | string table: valid forms, `1.`, `.5`, `.`, `-0`, `+0`, `0.0000`, `1.50000`, 30 leading zeros, tab and non-breaking space inside, max value and one over; display extremes (`0.0001`, `-0.0500`, `-8.0000`, minimum and maximum `i64`); checked ops; round trip | 120 / 200 |
+| t-02-parse | add `csv` (engineer approves); flexible byte records, trim all; header detection; row to event; typed parse errors naming row and field and carrying the tx id and kind for burning; zero amount rejected; any-case type | whitespace, CRLF, BOM (with headers off), short-row, no-header, empty, header-only, non-UTF-8 table; client above u16, tx above u32, non-numeric; tx id kept when another field fails | 170 / 250 |
+| t-03-engine | engine, entry map, apply, lock, burn rule, rules for D4 to D9 | one table case per row of the rules table in `DESIGN.md`, each decision's example, and the multi-event cases listed in the test plan (D14 to D16) | 240 / 350 |
+| t-04-io-cli | sorted writer through `BufWriter` with `flush`, shared log cap of 100 with per-reason counts, exit codes 0/1/2 (exactly one path), no output on a mid-file read failure, stderr failures ignored, thin `main` | data files each shown red once (incl. D9, D15, D16, D17 and the locked-account case); `tests/cli.rs` incl. missing file, no argument, two arguments, closed stdout and closed stderr | 120 / 250 |
+| t-05-edge | a fresh subagent reads only the spec and writes edge-case CSVs outside the repo; we run the binary on each and check the output by hand | every finding decided: fix (red test first), or document under `DECISIONS.md`, the README or a test | tests only unless a fix is chosen |
+| t-06-gen | `examples/gen.rs`: seeded generator, same seed gives the same bytes, no new dependencies | same seed twice gives identical bytes; a different seed differs; output is valid input | 80 / 40 |
+| t-07-numbers-docs | 10^7-row memory and time run using the generator; confirm limits | measured numbers recorded for the README | small |
 
 Gate for every slice: `./check.sh` re-run by the reviewer, `rust-review` on the diff, `pgrep -fl payments-engine` prints nothing.
 

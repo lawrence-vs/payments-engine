@@ -7,10 +7,14 @@ Rules and decisions: `DESIGN.md`, `DECISIONS.md`, `PLAN.md` (read before changin
 - One test: `cargo test <name>`.
 
 ## Contract
-<!-- filled in phase 1 from the brief's own text -->
+- stdout: accounts CSV only, 4 decimals
+- stderr: logs
+- exit 0 done, 1 I/O failure, 2 no input path
+- input: type, client (u16), tx (u32), amount (≤ 4 places), spaces allowed
 
 ## Code rules
 In `.claude/rules/rust.md` (loads with any `.rs` file).
+- Comments: none by default; one-line `///` only on a `pub` item whose name does not say what it does; one-line `//` only for a non-obvious why; none on trait impls or simple getters; no multi-line blocks. Copy this into every blueprint.
 
 ## Tests
 - Table-driven: named cases, inputs, expected output. Match errors by variant, never by message. A loop collects every failure before one assert.
