@@ -27,6 +27,10 @@ Policies are the engineer's. Each row: what we do, why (engineer's words), rejec
 - **Rejected:** burn only invalid-content rows (a failed withdrawal could be retried); burn nothing.
 - **UNVERIFIED:** scope is deposit and withdrawal rows only; dispute, resolve and chargeback rows reference an existing id and burn nothing.
 
+- **Locked accounts:** a deposit or withdrawal refused because the account is locked burns its id too.
+- **Why (locked):** A tx id is used once, and a retry needs a new id to stay idempotent.
+- **Left for the review agent:** the engine takes any `Amount` in a deposit or withdrawal; only the parser makes sure it is positive.
+
 ## D3 Bad rows and exit code
 - **Do:** log skipped rows (row number, field, category; never the raw text) up to one shared cap of 100 lines, then count per reason (bad, failed, ignored, needs review) and print the counts at the end, so review errors always show as a count (D20). Exit 0 if the file was read; exit 1 only for open, read or write failure; exit 2 unless exactly one input path is given (D21).
 - **Why:** 100 rows is enough to diagnose the issue causing skipped rows and see the pattern. If the system scales it is better to raise it; for this design constraint 100 is fine.
@@ -148,6 +152,12 @@ Findings F1 to F15 came from a read-only review of the design and test plan. Eac
 - **Why:** The whole row is broken, so we report that, and tx 5 still burns.
 - **Rejected:** field errors first (the first implementation did this; no test pinned the order).
 - **Tests:** three rows in the parse table (bad client, bad amount, unknown type, each with a fifth field) and two in the burn table.
+
+## D25 Engine edge points
+- **Do:** (a) one `Locked` error covers all five event types on a locked account; (b) a row that fails to parse burns its id but opens no account; (c) the error categories (bad, failed, ignored, needs review) are mapped in the output ticket, not in the engine.
+- **Why:** A row that fails to parse burns its id but opens no account. The other two points were agreed as written.
+- **Rejected:** opening an account from a row that failed to parse (the client may not be readable).
+- **Consequence:** for `deposit,7,1,abc` client 7 has no record, while `withdrawal,7,1,5` with no funds does (D14).
 
 ## Accepted without change
 - **F9 (locked account with another dispute open):** the rule stays; the held funds stay held for a human. A data file pins it. A resolve after a chargeback is ignored (the tx is final and the account is locked).
