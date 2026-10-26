@@ -77,7 +77,9 @@ Policies are the engineer's. Each row: what we do, why (engineer's words), rejec
 - **Do:** one `HashMap<u32, Entry>` holding every id used and what it was used for: a deposit (owner, amount, dispute state), a withdrawal, or a rejected row. The README states the maximum number of transactions this design can hold.
 - **Why:** Only one map is needed to keep track of ids used and what they were used for. It is easiest to review and it covers disputes. We can use it to state the limitation of this design. A section on future options can argue for a bitset and a dispute window for larger systems, depending on how users use or abuse the system. We do not want to over-design if it is not necessary.
 - **Rejected:** bitset of ids plus a deposit map; a hard entry limit that stops the run.
-- **UNVERIFIED:** entry size (assumed 24 bytes) and memory at 10^7 rows; estimates 0.4 GiB at 10^7, 3 GiB at 10^8, about 200 GiB if all u32 ids are used.
+- **Measured (release build, input piped from the seeded generator `gen <rows> 1 1000`, no file on disk):** `Entry` is 16 bytes (compile-time assert), so a stored id takes 24 bytes plus one control byte per table slot. Peak memory steps up each time the table doubles: 27 MB at 0.42M stored ids, 101 MB at 1.7M, 202 MB at 2.5M to 3.4M, 402 MB at 4.2M to 5.9M, and 761 MB at 8.5M ids (10^7 rows, 4.6 s, about 2.2M rows per second). With 65,535 clients at 10^7 rows the peak is 844 MB. The generator itself peaks at 1.5 MB, so the reader and the pipe are flat and the growth is the id map.
+- **Reading the numbers:** that is 68 to 95 bytes per stored id at the peak, about 1.3 times what a 25-byte slot plus the copy during a table doubling predicts. The extra was not investigated, UNVERIFIED.
+- **Extrapolation, UNVERIFIED:** about 7 to 9 GB for 10^8 stored ids, and roughly 300 to 400 GB if all 2^32 ids were used. The README states this as the limit of this design.
 
 ## D11 Shape
 - **Do:** synchronous. Parse a row into an event, `apply(engine, event)` returns a result, then write. The reader is generic over `Read`. Async and sharding are described only in the README.
