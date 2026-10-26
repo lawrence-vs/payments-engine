@@ -12,8 +12,8 @@ The submission is the code and the trail. The engineer decides and can explain e
 ## Roles
 | Who | Does | Never |
 |---|---|---|
-| Engineer | picks shapes and policies, approves plans and red tests, reads every diff, commits, writes README and AI_USAGE | accepts a diff they cannot explain |
-| Sonnet (main) | options with evidence, blueprints, review (`./check.sh` + `rust-review`), one question per slice | picks a policy silently, commits |
+| Engineer | picks shapes and policies, approves plans, reads every diff before a merge, writes README and AI_USAGE | accepts a diff they cannot explain |
+| Sonnet (main) | options with evidence, blueprints, review (`./check.sh` + `rust-review`), one question per slice, commits red and green once verified | picks a policy silently, merges to `main` |
 | Haiku (subagent) | builds one slice from a blueprint; crate versions and docs.rs lookups | changes the design, touches files outside the allowlist, commits |
 | Opus (subagent) | one attack on DESIGN.md, one on the test plan, final review | fixes what it finds |
 Stuck = two failed attempts or 15 minutes: a fresh Opus subagent gets only the failing test and the code, returns a ranked diagnosis; the engineer decides.
@@ -36,8 +36,8 @@ Stuck = two failed attempts or 15 minutes: a fresh Opus subagent gets only the f
 | Red | Haiku from blueprint, Sonnet checks | table tests, stub signatures so the failure is a wrong value, not a missing symbol | red output shown, fails for the right reason |
 | Act | Haiku from blueprint | smallest code that turns the table green | Haiku reports: files changed, `./check.sh` result, anything it was unsure of |
 | Verify | Sonnet | re-run `./check.sh` itself (never relay Haiku's claim), `rust-review` on `git diff`, every item reported | all pass; engineer reads the diff, answers one question |
-| Commit | engineer | `tests: red <slice>` then `feat: green <slice>` | `git status` first |
-Merge `--no-ff` to `main` when the ticket's acceptance tests are green.
+| Commit | Sonnet | `tests: red <slice>` after the red check, `feat: green <slice>` after the gate and `rust-review` pass; docs in their own commit | `git status` first |
+When the ticket's acceptance tests are green, stop: the engineer reads the diff, then merge `--no-ff` to `main`.
 
 ## Blueprint for the Haiku builder (zero shared context)
 Absolute paths · the types and signatures it touches · the exact table rows (name, input, expected) · allowlist and do-not-touch list · the traps below that apply · `./check.sh` · after the run `pgrep -fl <crate>` prints nothing · report format: files, gate output tail, open doubts. Run `cargo fmt` before the gate (re-wrapping tests is fine, changing a row is not). Never commit; never edit a test to make it pass. Sonnet checks the row names and count against the blueprint after green.
